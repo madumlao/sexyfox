@@ -10,9 +10,9 @@ How it works
 
 1. The profile directory is backed up (see "Profile Safety" below)
 2. The profile directory is copied over to the tmpfs
-3. ~/.mozilla is made into a symlink to the tmpfs
+3. The profile directory is made into a symlink to the tmpfs
 4. firefox is launched
-5. as soon as firefox is closed, the ~/.mozilla symlink is removed and replaced with the .mozilla in the tmpfs
+5. as soon as firefox is closed, the profile symlink is removed and replaced with the profile directory in the tmpfs
 
 Profile Safety
 --------------
@@ -21,7 +21,7 @@ As I just mentioned above, sexyfox copies your firefox profile into RAM. This me
 
 To prevent this from being a complete disaster, of course, the following steps are taken:
 
-1. A backup of the .mozilla folder is copied to profilename.previous before running firefox.
+1. A backup of the profile folder is copied to profilename.previous before running firefox.
 2. sexyfox periodically rsyncs the profile in the tmpdir to profilename.current (5 mins)
 3. as soon as firefox is closed, the profile symlink is removed and replaced with the profile in the tmpfs
 
