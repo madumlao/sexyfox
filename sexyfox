@@ -1,0 +1,107 @@
+#!/bin/bash
+#  Mounts firefox profile into tmpfs before running, then syncs it back after running
+
+FASTNAME=sexyfox
+PROFILE=`basename $0|sed -s 's/^'$FASTNAME'-//'`
+if [ "$PROFILE" = "$FASTNAME" ]; then PROFILE=default; fi
+USER=`whoami`
+LOCKNAME=mozilla
+TMPDIR=.mozilla
+APPNAME=firefox
+TMPFS=/tmp/$USER
+LOCKDIR=$HOME/.$FASTNAME/lock
+PLOCK=$LOCKDIR/$LOCKNAME-$PROFILE
+SYNC_WAIT=300   # sync every 5 minutes
+
+function sexyfox_running() {
+	local LOCKS=`find $LOCKDIR -type f -name "$LOCKNAME*" 2>/dev/null`
+	if [ "$LOCKS" ]; then
+		return 0 # lock found, sexyfox is running.
+	else
+		return 1 # lock not found
+	fi
+}
+
+function sexyfox_myprofile_running () {
+	local LOCK=`find $LOCKDIR -type f -name "$LOCKNAME-$PROFILE" 2>/dev/null`
+	if [ "$LOCK" ]; then
+		return 0 # lock found, sexyfox-profile is running
+	else
+		return 1 # lock not found
+	fi
+}
+
+function sexyfox_profiledirname () {
+	(
+	cd $HOME/$TMPDIR/$APPNAME
+	find -maxdepth 1 -name "*.$PROFILE" \( -type d -or -type l \) -exec basename {} \;  2>/dev/null
+	)
+}
+
+PROFILEDIR="$TMPDIR/$APPNAME/$(sexyfox_profiledirname)"
+TEMP_PROFILE="$TMPFS/$PROFILEDIR"
+HOME_PROFILE="$HOME/$PROFILEDIR"
+# if the original directory is a symlink, reference the symlink target instead
+if [ -h "$HOME_PROFILE" ]; then
+	if readlink "$HOME_PROFILE" | egrep -q '^/'; then
+		#absolute path
+		HOME_PROFILE=$(readlink "$HOME_PROFILE"|sed 's|/$||')
+	else
+		#relative path
+		HOME_PROFILE=$(dirname "$HOME_PROFILE")/$(readlink "$HOME_PROFILE"|sed 's|/$||')
+	fi
+fi
+PREV_PROFILE="$HOME_PROFILE.previous"
+CURR_PROFILE="$HOME_PROFILE.current"
+
+function sexyfox_sync_current () {
+	echo "Syncing tmpfs back to current profile directory... ($CURR_PROFILE) "
+	sleep $SYNC_WAIT
+	rsync -av --progress --delete "$TEMP_PROFILE/" "$CURR_PROFILE"
+}
+
+# link files under current profile to tmpfs directory.
+if ! sexyfox_myprofile_running; then
+	STARTER="starter"
+	mkdir -pv $LOCKDIR
+	touch $LOCKDIR/$LOCKNAME-$PROFILE
+	cd $HOME/
+
+	if ! [ -d "$TMPFS" ]; then mkdir -pv "$TMPFS"; fi
+
+	echo "Cleaning up previous backups..."
+	rm -Rvf "$PREV_PROFILE"
+
+	echo "Syncing current directory to tmpfs..."
+	mkdir -pv $TEMP_PROFILE
+	rsync -av --progress --delete "$HOME_PROFILE/" "$TEMP_PROFILE"
+
+	echo "Swapping home profile with tmpfs"
+	mv -v "$HOME_PROFILE" "$PREV_PROFILE"
+	rsync -av "$PREV_PROFILE" "$CURR_PROFILE"
+	ln -sv "$TEMP_PROFILE" "$HOME_PROFILE"
+
+	echo "Starting periodic resyncer"
+	(
+		sleep $SYNC_WAIT
+		while [ -f $LOCKDIR/$LOCKNAME-$PROFILE ]; do
+			sexyfox_sync_current
+			sleep $SYNC_WAIT
+		done
+	) &
+fi
+
+# run sexyfox with the given arguments
+$APPNAME -P $PROFILE $*
+
+# if we're the instance that started this profile, and we just exited, we have the right to sync back
+if [ "$STARTER" ]; then
+	cd $TMPFS/
+
+	echo "Syncing tmpfs back to profile directory... ($HOME_PROFILE)"
+	rm -v "$HOME_PROFILE"
+	rsync -av --progress --delete "$TEMP_PROFILE/" "$HOME_PROFILE"
+
+	# remove the lock on the profile
+	rm -v $LOCKDIR/$LOCKNAME-$PROFILE
+fi
