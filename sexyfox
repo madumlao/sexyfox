@@ -78,6 +78,18 @@ function sexyfox_sync_current () {
 	rsync -av --progress --delete "$TEMP_PROFILE/" "$CURR_PROFILE"
 }
 
+# sleeps either until sync or lock file is removed
+function sexyfox_sync_wait () {
+	WAIT=$1
+	for ((x=0; $x<$WAIT; x=$x+1)); do
+		if ! [ -f $LOCKDIR/$LOCKNAME-$PROFILE ]; then
+			return 1 # dont sync
+		fi
+		sleep 1
+	done
+	return 0
+}
+
 # link files under current profile to tmpfs directory.
 if ! sexyfox_myprofile_running; then
 	STARTER="starter"
@@ -101,10 +113,8 @@ if ! sexyfox_myprofile_running; then
 
 	echo "Starting periodic resyncer"
 	(
-		sleep $SYNC_WAIT
-		while [ -f $LOCKDIR/$LOCKNAME-$PROFILE ]; do
+		while sexyfox_sync_wait $SYNC_WAIT; do
 			sexyfox_sync_current
-			sleep $SYNC_WAIT
 		done
 	) &
 fi
