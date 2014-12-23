@@ -56,6 +56,24 @@ CURR_PROFILE="$HOME_PROFILE.current"
 
 function sexyfox_sync_current () {
 	echo "Syncing tmpfs back to current profile directory... ($CURR_PROFILE) "
+	cat <<-'SAFETY_PIG'
+		Note: this means we're syncing any open sqlite databases into the current profile.
+		I'm not sure that's a good idea, so here's a safety pig.
+		
+		 _._ _..._ .-',     _.._(`))
+		'-. `     '  /-._.-'    ',/
+		   )         \            '.
+		  / _    _    |             \
+		 |  a    a    /              |
+		 \   .-.                     ;
+		  '-('' ).-'       ,'       ;
+		     '-;           |      .'
+		        \           \    /
+		        | 7  .__  _.-\   \
+		        | |  |  ``/  /`  /
+		       /,_|  |   /,_/   /
+		          /,_/      '`-'
+	SAFETY_PIG
 	sleep $SYNC_WAIT
 	rsync -av --progress --delete "$TEMP_PROFILE/" "$CURR_PROFILE"
 }
