@@ -71,6 +71,19 @@ function sexyfox_sync_wait () {
 	return 0
 }
 
+# returns true on improper shutdown
+function sexyfox_improper_shutdown () {
+	# lock file exists,
+	# home profile is a symlink to the temp profile
+	# temp profile doesn't exist
+	if sexyfox_myprofile_running && \
+	   [ "$TEMP_PROFILE" = "$(readlink $HOME_PROFILE)" ] && \
+	   ! [ -d "$TEMP_PROFILE" ]; then
+	  return 0 # improper shutdown
+	fi
+	return 1 # proper shutdown
+}
+
 #########################################################
 
 PROFILEDIR="$TMPDIR/$APPNAME/$(sexyfox_profiledirname)"
@@ -86,6 +99,20 @@ if [ -h "$HOME_PROFILE" ]; then
 		#relative path
 		HOME_PROFILE=$(dirname "$HOME_PROFILE")/$(readlink "$HOME_PROFILE"|sed 's|/$||')
 	fi
+fi
+
+# check for improperly shut down sexyfoxen
+if sexyfox_improper_shutdown; then
+	echo "Improper shutdown detected, using previous profile"
+
+	# remove the lock file
+	rm -v $PLOCK
+	
+	# remove the symlink
+	rm -v $HOME_PROFILE
+	
+	# use the previous profile
+	mv -v $(prev_profile) $HOME_PROFILE
 fi
 
 # link files under current profile to tmpfs directory.
