@@ -13,15 +13,6 @@ LOCKDIR=$HOME/.$FASTNAME/lock
 PLOCK=$LOCKDIR/$LOCKNAME-$PROFILE
 SYNC_WAIT=300   # sync every 5 minutes
 
-function sexyfox_running() {
-	local LOCKS=`find $LOCKDIR -type f -name "$LOCKNAME*" 2>/dev/null`
-	if [ "$LOCKS" ]; then
-		return 0 # lock found, sexyfox is running.
-	else
-		return 1 # lock not found
-	fi
-}
-
 function sexyfox_myprofile_running () {
 	local LOCK=`find $LOCKDIR -type f -name "$LOCKNAME-$PROFILE" 2>/dev/null`
 	if [ "$LOCK" ]; then
