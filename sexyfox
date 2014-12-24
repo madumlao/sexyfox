@@ -41,21 +41,15 @@ function sexyfox_profiledirname () {
 PROFILEDIR="$TMPDIR/$APPNAME/$(sexyfox_profiledirname)"
 TEMP_PROFILE="$TMPFS/$PROFILEDIR"
 HOME_PROFILE="$HOME/$PROFILEDIR"
-# if the original directory is a symlink, reference the symlink target instead
-if [ -h "$HOME_PROFILE" ]; then
-	if readlink "$HOME_PROFILE" | egrep -q '^/'; then
-		#absolute path
-		HOME_PROFILE=$(readlink "$HOME_PROFILE"|sed 's|/$||')
-	else
-		#relative path
-		HOME_PROFILE=$(dirname "$HOME_PROFILE")/$(readlink "$HOME_PROFILE"|sed 's|/$||')
-	fi
-fi
-PREV_PROFILE="$HOME_PROFILE.previous"
-CURR_PROFILE="$HOME_PROFILE.current"
+function prev_profile () {
+	echo -n "$HOME_PROFILE.previous"
+}
+function curr_profile () {
+	echo -n "$HOME_PROFILE.current"
+}
 
 function sexyfox_sync_current () {
-	echo "Syncing tmpfs back to current profile directory... ($CURR_PROFILE) "
+	echo "Syncing tmpfs back to current profile directory... ($(curr_profile)) "
 	cat <<-'SAFETY_PIG'
 		Note: this means we're syncing any open sqlite databases into the current profile.
 		I'm not sure that's a good idea, so here's a safety pig.
@@ -75,7 +69,7 @@ function sexyfox_sync_current () {
 		          /,_/      '`-'
 	SAFETY_PIG
 	sleep $SYNC_WAIT
-	rsync -av --progress --delete "$TEMP_PROFILE/" "$CURR_PROFILE"
+	rsync -av --progress --delete "$TEMP_PROFILE/" "$(curr_profile)"
 }
 
 # sleeps either until sync or lock file is removed
@@ -90,6 +84,17 @@ function sexyfox_sync_wait () {
 	return 0
 }
 
+# if the original directory is a symlink, reference the symlink target instead
+if [ -h "$HOME_PROFILE" ]; then
+	if readlink "$HOME_PROFILE" | egrep -q '^/'; then
+		#absolute path
+		HOME_PROFILE=$(readlink "$HOME_PROFILE"|sed 's|/$||')
+	else
+		#relative path
+		HOME_PROFILE=$(dirname "$HOME_PROFILE")/$(readlink "$HOME_PROFILE"|sed 's|/$||')
+	fi
+fi
+
 # link files under current profile to tmpfs directory.
 if ! sexyfox_myprofile_running; then
 	STARTER="starter"
@@ -100,15 +105,15 @@ if ! sexyfox_myprofile_running; then
 	if ! [ -d "$TMPFS" ]; then mkdir -pv "$TMPFS"; fi
 
 	echo "Cleaning up previous backups..."
-	rm -Rvf "$PREV_PROFILE"
+	rm -Rvf "$(prev_profile)"
 
 	echo "Syncing current directory to tmpfs..."
 	mkdir -pv $TEMP_PROFILE
 	rsync -av --progress --delete "$HOME_PROFILE/" "$TEMP_PROFILE"
 
 	echo "Swapping home profile with tmpfs"
-	mv -v "$HOME_PROFILE" "$PREV_PROFILE"
-	rsync -av "$PREV_PROFILE" "$CURR_PROFILE"
+	mv -v "$HOME_PROFILE" "$(prev_profile)"
+	rsync -av "$(prev_profile)" "$(curr_profile)"
 	ln -sv "$TEMP_PROFILE" "$HOME_PROFILE"
 
 	echo "Starting periodic resyncer"
