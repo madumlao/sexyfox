@@ -27,7 +27,7 @@ To prevent this from being a complete disaster, of course, the following steps a
 
 This means, of course, that your home directory will at any point in time have 2-3 copies of the mozilla profile directory.
 
-If ever a power interruption occurs before firefox is closed, the profile will be invalid. In which case either remove the symlink (~/.mozilla/randomrandomrandom.profilename) and replace it with either the .current (latest sync) or the .previous (state before the sync) directory.
+If ever a power interruption occurs before firefox is closed, the profile will be invalid. In which case, sexyfox will try to use the previous profile on next start. However, you may opt to use the last synced current profile by removing the symlink (~/.mozilla/randomrandomrandom.profilename) and replacing it with either the profilename.current (latest sync) directory.
 
 Usage
 -----
