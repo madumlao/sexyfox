@@ -28,9 +28,6 @@ function sexyfox_profiledirname () {
 	)
 }
 
-PROFILEDIR="$TMPDIR/$APPNAME/$(sexyfox_profiledirname)"
-TEMP_PROFILE="$TMPFS/$PROFILEDIR"
-HOME_PROFILE="$HOME/$PROFILEDIR"
 function prev_profile () {
 	echo -n "$HOME_PROFILE.previous"
 }
@@ -73,6 +70,12 @@ function sexyfox_sync_wait () {
 	done
 	return 0
 }
+
+#########################################################
+
+PROFILEDIR="$TMPDIR/$APPNAME/$(sexyfox_profiledirname)"
+TEMP_PROFILE="$TMPFS/$PROFILEDIR"
+HOME_PROFILE="$HOME/$PROFILEDIR"
 
 # if the original directory is a symlink, reference the symlink target instead
 if [ -h "$HOME_PROFILE" ]; then
