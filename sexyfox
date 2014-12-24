@@ -14,8 +14,7 @@ PLOCK=$LOCKDIR/$LOCKNAME-$PROFILE
 SYNC_WAIT=300   # sync every 5 minutes
 
 function sexyfox_myprofile_running () {
-	local LOCK=`find $LOCKDIR -type f -name "$LOCKNAME-$PROFILE" 2>/dev/null`
-	if [ "$LOCK" ]; then
+	if [ -f "$PLOCK" ]; then
 		return 0 # lock found, sexyfox-profile is running
 	else
 		return 1 # lock not found
@@ -67,7 +66,7 @@ function sexyfox_sync_current () {
 function sexyfox_sync_wait () {
 	WAIT=$1
 	for ((x=0; $x<$WAIT; x=$x+1)); do
-		if ! [ -f $LOCKDIR/$LOCKNAME-$PROFILE ]; then
+		if ! [ -f $PLOCK ]; then
 			return 1 # dont sync
 		fi
 		sleep 1
@@ -90,7 +89,7 @@ fi
 if ! sexyfox_myprofile_running; then
 	STARTER="starter"
 	mkdir -pv $LOCKDIR
-	touch $LOCKDIR/$LOCKNAME-$PROFILE
+	touch $PLOCK
 	cd $HOME/
 
 	if ! [ -d "$TMPFS" ]; then mkdir -pv "$TMPFS"; fi
@@ -127,5 +126,5 @@ if [ "$STARTER" ]; then
 	rsync -av --progress --delete "$TEMP_PROFILE/" "$HOME_PROFILE"
 
 	# remove the lock on the profile
-	rm -v $LOCKDIR/$LOCKNAME-$PROFILE
+	rm -v $PLOCK
 fi
